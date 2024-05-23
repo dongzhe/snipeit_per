@@ -13,6 +13,7 @@ use App\Models\LicenseSeat;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\View;
 
 class AssetCheckinController extends Controller
@@ -45,7 +46,7 @@ class AssetCheckinController extends Controller
             return redirect()->route('hardware.index')->with('error', trans('admin/hardware/message.checkin.already_checked_in'));
         }
 
-        return view('hardware/checkin', compact('asset'))->with('statusLabel_list', Helper::statusLabelList())->with('backto', $backto);
+        return view('hardware/checkin', compact('asset'))->with('statusLabel_list', Helper::statusLabelList())->with('backto', $backto)->with('table_name', 'Assets');
     }
 
     /**
@@ -122,15 +123,12 @@ class AssetCheckinController extends Controller
             $acceptance->delete();
         });
 
+        Session::put('redirect_option', $request->get('redirect_option'));
         // Was the asset updated?
         if ($asset->save()) {
+
             event(new CheckoutableCheckedIn($asset, $target, Auth::user(), $request->input('note'), $checkin_at, $originalValues));
-
-            if ((isset($user)) && ($backto == 'user')) {
-                return redirect()->route('users.show', $user->id)->with('success', trans('admin/hardware/message.checkin.success'));
-            }
-
-            return redirect()->route('hardware.index')->with('success', trans('admin/hardware/message.checkin.success'));
+            return Helper::getRedirectOption($asset, $assetId, 'Assets');
         }
         // Redirect to the asset management page with error
         return redirect()->route('hardware.index')->with('error', trans('admin/hardware/message.checkin.error').$asset->getErrors());
