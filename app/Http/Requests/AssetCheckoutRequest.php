@@ -14,6 +14,22 @@ class AssetCheckoutRequest extends Request
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (!empty($this->assigned_user)) {
+            $this->assigned_type =  'App\Models\User';
+        } elseif (!empty($this->assigned_asset)) {
+            $this->assigned_type =  'App\Models\Asset';
+        } elseif (!empty($this->assigned_location)) {
+            $this->assigned_type = 'App\Models\Location';
+        }
+
+        $this->merge([
+            'assigned_type' => $this->assigned_type,
+        ]);
+    }
+
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -22,13 +38,14 @@ class AssetCheckoutRequest extends Request
     public function rules()
     {
         $rules = [
-            'assigned_user'         => 'required_without_all:assigned_asset,assigned_location',
-            'assigned_asset'        => 'required_without_all:assigned_user,assigned_location',
-            'assigned_location'     => 'required_without_all:assigned_user,assigned_asset',
+            'assigned_user'         => ['required_without_all:assigned_asset,assigned_location','nullable','exists:users,id,deleted_at,NULL'],
+            'assigned_asset'        => ['required_without_all:assigned_user,assigned_location','nullable','exists:assets,id,deleted_at,NULL'],
+            'assigned_location'     => ['required_without_all:assigned_user,assigned_asset','nullable','exists:locations,id,deleted_at,NULL'],
             'status_id'             => 'exists:status_labels,id,deployable,1',
-            'checkout_to_type'      => 'required|in:asset,location,user',
         ];
 
         return $rules;
     }
+
+
 }
